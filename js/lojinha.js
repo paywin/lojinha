@@ -1,5 +1,4 @@
-
-        // Sample data
+// Sample data - Lojas locais mantidas
         let stores = [
             { id: 1, name: "Messi Sports", description: "Loja oficial de produtos esportivos do Messi", category: "Esportes", address: "Av. Paulista, 1000 - São Paulo, SP", image: "https://imagens.ebc.com.br/gnI4BvUvr_DaNi1UYumXCW4N1fU=/1170x700/smart/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/2020-09-04t074743z_1244062587_rc2jri9dq6xt_rtrmadp_3_soccer-spain-advertisaing.jpg?itok=z64e34Yz", ownerId: 1 },
             { id: 2, name: "Ney Store", description: "Tudo para o seu futebol", category: "Equipamentos", address: "Rua Augusta, 500 - São Paulo, SP", image: "https://img.nsctotal.com.br/wp-content/uploads/2025/01/Nova-chuteira-Neymar-20.jpg", ownerId: 2 },
@@ -7,14 +6,8 @@
             { id: 4, name: "Mbappe Acessórios", description: "Acessórios para torcedores e jogadores", category: "Acessórios", address: "Rua Oscar Freire, 200 - São Paulo, SP", image: "https://s2-oglobo.glbimg.com/HxwMb-91ISfn8kRZdDdamryUC4E=/0x0:421x440/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2024/B/I/wL8SAUQgyQqDMEdF3nNw/mbappe2.png", ownerId: 4 }
         ];
 
-        let products = [
-            { id: 1, storeId: 1, name: "Bola de Futebol Oficial", price: 129.90, description: "Bola oficial de alta qualidade para partidas", category: "Bolas", quantity: 50, image: "https://images.unsplash.com/photo-1614632537197-38a17061c2bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" },
-            { id: 2, storeId: 1, name: "Chuteiras de campo", price: 199.90, description: "Chuteira confortável para society", category: "Chuteiras", quantity: 30, image: "https://img.nsctotal.com.br/wp-content/uploads/2025/01/Nova-chuteira-Neymar-23.jpg" },
-            { id: 3, storeId: 2, name: "Camisa do Barcelona", price: 299.90, description: "Camisa oficial do Barcelona", category: "Camisas", quantity: 20, image: "https://images.tcdn.com.br/img/img_prod/1044362/camisa_futebol_barcelona_i_2526_torcedor_azul_e_ve_2_20250806084716_9b2cda2e7efb.png" },
-            { id: 4, storeId: 3, name: "Meiões de Futebol", price: 39.90, description: "Meiões confortáveis para jogar", category: "Acessórios", quantity: 100, image: "https://www.soccerbible.com/media/46563/walker-sane-tab.jpg" },
-            { id: 5, storeId: 4, name: "Luvas de Goleiro", price: 159.90, description: "Luvas profissionais para goleiros", category: "Equipamentos", quantity: 25, image: "https://i.ytimg.com/vi/bXzYJZKYQ88/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLCdAce1W1oAnIjd8x_59Y5UpqL7bg" },
-            { id: 6, storeId: 2, name: "Caneleira Profissional", price: 49.90, description: "Caneleira de proteção profissional", category: "Equipamentos", quantity: 75, image: "https://photos.enjoei.com.br/caneleira-nike-tamanho-m-107395444/800x800/czM6Ly9waG90b3MuZW5qb2VpLmNvbS5ici9wcm9kdWN0cy8xMzE2OTk4Mi9kZjMxM2YwMTk1ZmNhZjA5MGViMWFjNWExZWU5ZDM5Yi5qcGc" }
-        ];
+        // Array de produtos começa vazio e é preenchido pela API Externa
+        let products = [];
 
         // User and cart data
         let currentUser = null;
@@ -24,9 +17,39 @@
         let sellerProducts = [];
         let currentStoreId = null;
 
+        // ==========================================
+        // CONSUMO DE API EXTERNA (MERCADO LIVRE)
+        // ==========================================
+        async function carregarProdutosMercadoLivre() {
+            try {
+                // Busca produtos reais da categoria 'futebol' na API do Mercado Livre
+                const response = await fetch('https://api.mercadolibre.com/sites/MLB/search?q=futebol&limit=12');
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    // Mapeia os dados da API para a estrutura utilizada na sua aplicação
+                    products = data.results.map((item, index) => ({
+                        id: item.id || index + 1,
+                        storeId: (index % stores.length) + 1, // Distribui entre as lojas ativas
+                        name: item.title,
+                        price: item.price,
+                        description: "Produto obtido em tempo real via API pública do Mercado Livre.",
+                        category: "Futebol",
+                        quantity: item.available_quantity || 10,
+                        image: item.thumbnail.replace('I.jpg', 'O.jpg') // Converte para imagem em alta resolução
+                    }));
+
+                    // Atualiza a interface
+                    renderProducts();
+                    renderFeaturedProducts();
+                }
+            } catch (error) {
+                console.error('Erro ao buscar produtos da API externa:', error);
+            }
+        }
+
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function () {
-            // Check if user is already logged in (for demo purposes)
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
@@ -34,12 +57,13 @@
                 showApp();
             }
 
+            // Busca produtos da API externa assim que a página carrega
+            carregarProdutosMercadoLivre();
+
             renderStores();
-            renderProducts();
             updateCartCount();
             populateStoreFilter();
 
-            // Show login page by default
             showPage('login-page');
         });
 
@@ -62,7 +86,6 @@
                 return;
             }
 
-            // For demo purposes, we'll create a simple user
             currentUser = {
                 id: 1,
                 name: email.split('@')[0],
@@ -70,9 +93,7 @@
                 type: userType
             };
 
-            // Save to localStorage
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
             showApp();
         }
 
@@ -81,7 +102,6 @@
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('app').style.display = 'block';
 
-            // Show seller nav if user is a seller
             if (userType === 'seller') {
                 document.getElementById('seller-nav').style.display = 'block';
                 checkSellerStore();
@@ -95,20 +115,15 @@
             const userStore = stores.find(store => store.ownerId === currentUser.id);
 
             if (userStore) {
-                // Seller has a store, show product management sections
                 document.getElementById('productManagementSection').style.display = 'block';
                 document.getElementById('myProductsSection').style.display = 'block';
                 document.getElementById('myStoreProductsSection').style.display = 'block';
                 document.getElementById('storeRegistrationSection').style.display = 'none';
 
-                // Set current store ID
                 currentStoreId = userStore.id;
-
-                // Render seller's products
                 renderSellerProducts();
                 renderMyStoreProducts();
             } else {
-                // Seller doesn't have a store, show registration section
                 document.getElementById('productManagementSection').style.display = 'none';
                 document.getElementById('myProductsSection').style.display = 'none';
                 document.getElementById('myStoreProductsSection').style.display = 'none';
@@ -142,13 +157,11 @@
             stores.push(newStore);
             currentStoreId = newStore.id;
 
-            // Show product management sections
             document.getElementById('productManagementSection').style.display = 'block';
             document.getElementById('myProductsSection').style.display = 'block';
             document.getElementById('myStoreProductsSection').style.display = 'block';
             document.getElementById('storeRegistrationSection').style.display = 'none';
 
-            // Clear form
             document.getElementById('storeName').value = '';
             document.getElementById('storeDescription').value = '';
             document.getElementById('storeAddress').value = '';
@@ -167,16 +180,13 @@
 
         // Page navigation
         function showPage(pageId) {
-            // Hide all pages
             const pages = document.querySelectorAll('.page');
             pages.forEach(page => {
                 page.style.display = 'none';
             });
 
-            // Show the selected page
             document.getElementById(pageId).style.display = 'block';
 
-            // Update specific page content if needed
             if (pageId === 'cart') {
                 renderCart();
             } else if (pageId === 'orders') {
@@ -221,7 +231,6 @@
             const featuredStores = document.getElementById('featuredStores');
             featuredStores.innerHTML = '';
 
-            // Show first 4 stores as featured
             stores.slice(0, 4).forEach(store => {
                 const storeCard = document.createElement('div');
                 storeCard.className = 'store-card';
@@ -246,10 +255,8 @@
             const store = stores.find(s => s.id === storeId);
             if (!store) return;
 
-            // Set current store ID
             currentStoreId = storeId;
 
-            // Render store header
             const storeHeader = document.getElementById('storeHeader');
             storeHeader.innerHTML = `
                 <div class="store-logo">
@@ -263,7 +270,6 @@
                 </div>
             `;
 
-            // Render store products
             const storeProductsList = document.getElementById('storeProductsList');
             storeProductsList.innerHTML = '';
 
@@ -286,13 +292,12 @@
                         <div class="product-description">${product.description}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <button class="btn btn-block" onclick="addToCart(${product.id})">Adicionar ao Carrinho</button>
+                        <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
                 storeProductsList.appendChild(productCard);
             });
 
-            // Show store products page
             showPage('store-products');
         }
 
@@ -304,6 +309,11 @@
         function renderProducts() {
             const productsList = document.getElementById('productsList');
             productsList.innerHTML = '';
+
+            if (products.length === 0) {
+                productsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando produtos reais da API...</p>';
+                return;
+            }
 
             products.forEach(product => {
                 const store = stores.find(s => s.id === product.storeId);
@@ -319,7 +329,7 @@
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
                         <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
-                        <button class="btn btn-block" onclick="addToCart(${product.id})">Adicionar ao Carrinho</button>
+                        <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
                 productsList.appendChild(productCard);
@@ -330,7 +340,6 @@
             const featuredProducts = document.getElementById('featuredProducts');
             featuredProducts.innerHTML = '';
 
-            // Show first 6 products as featured
             products.slice(0, 6).forEach(product => {
                 const store = stores.find(s => s.id === product.storeId);
                 const productCard = document.createElement('div');
@@ -345,7 +354,7 @@
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
                         <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
-                        <button class="btn btn-block" onclick="addToCart(${product.id})">Adicionar ao Carrinho</button>
+                        <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
                 featuredProducts.appendChild(productCard);
@@ -374,8 +383,8 @@
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
                         <div class="product-category">Categoria: ${product.category}</div>
-                        <button class="btn btn-block" style="margin-top: 0.5rem;" onclick="editProduct(${product.id})">Editar</button>
-                        <button class="btn" style="background-color: var(--danger-color); margin-top: 0.5rem; width: 100%;" onclick="deleteProduct(${product.id})">Excluir</button>
+                        <button class="btn btn-block" style="margin-top: 0.5rem;" onclick="editProduct('${product.id}')">Editar</button>
+                        <button class="btn" style="background-color: var(--danger-color); margin-top: 0.5rem; width: 100%;" onclick="deleteProduct('${product.id}')">Excluir</button>
                     </div>
                 `;
                 sellerProductsList.appendChild(productCard);
@@ -427,7 +436,7 @@
             }
 
             const newProduct = {
-                id: sellerProducts.length + 1,
+                id: 'local_' + (sellerProducts.length + 1),
                 storeId: currentStoreId,
                 name: name,
                 price: price,
@@ -438,11 +447,8 @@
             };
 
             sellerProducts.push(newProduct);
+            products.unshift(newProduct);
 
-            // Also add to main products list for customers to see
-            products.push(newProduct);
-
-            // Clear form
             document.getElementById('productName').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productQuantity').value = '';
@@ -451,6 +457,7 @@
 
             renderSellerProducts();
             renderMyStoreProducts();
+            renderProducts();
             showNotification('Produto adicionado com sucesso!');
         }
 
@@ -465,10 +472,8 @@
             document.getElementById('productDescription').value = product.description;
             document.getElementById('productImage').value = product.image;
 
-            // Remove the product to be edited
             deleteProduct(productId, false);
-
-            showNotification('Produto carregado para edição. Faça as alterações e clique em Adicionar Produto.');
+            showNotification('Produto carregado para edição.');
         }
 
         function deleteProduct(productId, showAlert = true) {
@@ -477,6 +482,7 @@
 
             renderSellerProducts();
             renderMyStoreProducts();
+            renderProducts();
 
             if (showAlert) {
                 showNotification('Produto excluído com sucesso!');
@@ -580,7 +586,7 @@
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
                         <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
-                        <button class="btn btn-block" onclick="addToCart(${product.id})">Adicionar ao Carrinho</button>
+                        <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
                 productsList.appendChild(productCard);
@@ -622,7 +628,7 @@
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
                         <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
-                        <button class="btn btn-block" onclick="addToCart(${product.id})">Adicionar ao Carrinho</button>
+                        <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
                 productsList.appendChild(productCard);
@@ -643,8 +649,10 @@
 
         // Cart functionality
         function addToCart(productId) {
-            const product = products.find(p => p.id === productId);
-            const existingItem = cart.find(item => item.id === productId);
+            const product = products.find(p => p.id == productId);
+            if (!product) return;
+
+            const existingItem = cart.find(item => item.id == productId);
 
             if (existingItem) {
                 if (existingItem.quantity >= product.quantity) {
@@ -699,10 +707,10 @@
                         <div class="cart-item-title">${item.name}</div>
                         <div class="cart-item-price">R$ ${item.price.toFixed(2)}</div>
                         <div class="cart-item-quantity">
-                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
-                            <input type="number" class="quantity-input" value="${item.quantity}" min="1" onchange="updateQuantity(${item.id}, parseInt(this.value))">
-                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
-                            <button style="margin-left: 1rem; color: var(--danger-color); background: none; border: none; cursor: pointer;" onclick="removeFromCart(${item.id})">Remover</button>
+                            <button class="quantity-btn" onclick="updateQuantity('${item.id}', ${item.quantity - 1})">-</button>
+                            <input type="number" class="quantity-input" value="${item.quantity}" min="1" onchange="updateQuantity('${item.id}', parseInt(this.value))">
+                            <button class="quantity-btn" onclick="updateQuantity('${item.id}', ${item.quantity + 1})">+</button>
+                            <button style="margin-left: 1rem; color: var(--danger-color); background: none; border: none; cursor: pointer;" onclick="removeFromCart('${item.id}')">Remover</button>
                         </div>
                     </div>
                     <div style="font-weight: bold;">R$ ${itemTotal.toFixed(2)}</div>
@@ -721,13 +729,13 @@
         function updateQuantity(productId, newQuantity) {
             if (newQuantity < 1) return;
 
-            const product = products.find(p => p.id === productId);
-            if (newQuantity > product.quantity) {
+            const product = products.find(p => p.id == productId);
+            if (product && newQuantity > product.quantity) {
                 alert('Quantidade máxima disponível atingida!');
                 return;
             }
 
-            const item = cart.find(item => item.id === productId);
+            const item = cart.find(item => item.id == productId);
             if (item) {
                 item.quantity = newQuantity;
                 renderCart();
@@ -736,7 +744,7 @@
         }
 
         function removeFromCart(productId) {
-            cart = cart.filter(item => item.id !== productId);
+            cart = cart.filter(item => item.id != productId);
             renderCart();
             updateCartCount();
         }
@@ -775,27 +783,8 @@
             ordersList.innerHTML = '';
 
             orders.forEach(order => {
-                let statusText = '';
-                let statusClass = '';
-
-                switch (order.status) {
-                    case 'pending':
-                        statusText = 'Pendente';
-                        statusClass = 'status-pending';
-                        break;
-                    case 'confirmed':
-                        statusText = 'Confirmado';
-                        statusClass = 'status-confirmed';
-                        break;
-                    case 'shipped':
-                        statusText = 'Enviado';
-                        statusClass = 'status-shipped';
-                        break;
-                    case 'delivered':
-                        statusText = 'Entregue';
-                        statusClass = 'status-delivered';
-                        break;
-                }
+                let statusText = 'Pendente';
+                let statusClass = 'status-pending';
 
                 const orderCard = document.createElement('div');
                 orderCard.className = 'order-card';
@@ -842,27 +831,20 @@
 
             const messagesContainer = document.getElementById('chatMessages');
 
-            // Add user message
             const userMessage = document.createElement('div');
             userMessage.className = 'chat-message message-user';
             userMessage.textContent = message;
             messagesContainer.appendChild(userMessage);
 
-            // Clear input
             input.value = '';
-
-            // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-            // Simulate bot response after a short delay
             setTimeout(() => {
                 const botResponse = getBotResponse(message);
                 const botMessage = document.createElement('div');
                 botMessage.className = 'chat-message message-bot';
                 botMessage.textContent = botResponse;
                 messagesContainer.appendChild(botMessage);
-
-                // Scroll to bottom again
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }, 1000);
         }
@@ -876,14 +858,6 @@
                 return 'Temos uma variedade de produtos de futebol de alta qualidade. Você pode ver nosso catálogo na página de produtos!';
             } else if (lowerMessage.includes('carrinho') || lowerMessage.includes('compras')) {
                 return 'Você pode ver e gerenciar seus itens no carrinho de compras. Lá você pode finalizar seu pedido também!';
-            } else if (lowerMessage.includes('pedido') || lowerMessage.includes('entrega')) {
-                return 'Após finalizar a compra, você pode acompanhar seus pedidos na página de pedidos. O prazo de entrega é de 3 a 7 dias úteis.';
-            } else if (lowerMessage.includes('pagamento') || lowerMessage.includes('cartão')) {
-                return 'Aceitamos cartões de crédito e débito. Nosso checkout é seguro e seus dados são protegidos.';
-            } else if (lowerMessage.includes('loja') || lowerMessage.includes('lojas')) {
-                return 'Temos várias lojas parceiras com produtos de alta qualidade. Confira na nossa seção de lojas!';
-            } else if (lowerMessage.includes('vendedor') || lowerMessage.includes('vender')) {
-                return 'Se você é um vendedor, pode se cadastrar como vendedor e adicionar seus produtos na plataforma!';
             } else if (lowerMessage.includes('obrigado') || lowerMessage.includes('obrigada')) {
                 return 'De nada! Estou aqui para ajudar. Se tiver mais alguma dúvida, é só perguntar!';
             } else {
@@ -893,6 +867,5 @@
 
         // Utility functions
         function showNotification(message) {
-            // In a real app, you would show a proper notification
             alert(message);
         }
