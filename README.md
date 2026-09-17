@@ -69,4 +69,8 @@ Após publicar, confirme `/api/health`, abra o frontend e cadastre um produto de
 
 ## Estado da execução
 
-O build local e os quatro testes de regressão do frontend (`npm run test:frontend`, DOM simulado com API simulada) passaram. Esses testes verificam sessão, IDs, criação/edição/exclusão, cancelamento, tratamento de falhas e escape de HTML; não substituem o teste ponta a ponta. O envio pelo GitHub foi recusado pela integração com HTTP 403; os commits ainda estão locais. O início do MongoDB temporário neste ambiente foi bloqueado com `open: Operation not permitted`; a validação real da suíte deve ser confirmada no GitHub Actions ou em ambiente local compatível. O navegador remoto também não permite abrir localhost. Deploys e testes em nuvem dependem de autenticação no Render e no Atlas e das variáveis de ambiente correspondentes.
+Código enviado à branch main. Build, quatro testes de frontend e quatro testes de backend com MongoDB real aprovados no GitHub Actions: https://github.com/paywin/lojinha/actions/runs/35178322979
+
+Serviço gratuito criado no Render: https://dashboard.render.com/web/srv-dallt7ek1f9s738mp4h0
+
+A API ainda depende de configurar MONGODB_URI e ADMIN_TOKEN no ambiente do Render. Após configurar, verificar a saúde em https://lojinha-api-jwus.onrender.com/api/health e publicar o frontend no Netlify com API_URL=https://lojinha-api-jwus.onrender.com/api. Os testes ponta a ponta em nuvem permanecem pendentes.
