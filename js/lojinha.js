@@ -21,32 +21,35 @@
         // ==========================================
         // CONSUMO DE API EXTERNA (MERCADO LIVRE)
         // ==========================================
-        async function carregarProdutosMercadoLivre() {
+        const API_URL = window.APP_CONFIG?.apiUrl || 'http://localhost:3000/api';
+        let apiError = '';
+        let savingProduct = false;
+        async function apiRequest(path, options = {}) {
+            const token = document.getElementById('adminToken')?.value || '';
+            const response = await fetch(API_URL + path, {
+                ...options,
+                headers: { 'Content-Type': 'application/json', ...(options.method ? { Authorization: `Bearer ${token}` } : {}) },
+                signal: AbortSignal.timeout(20000)
+            });
+            if (response.status === 204) return null;
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Erro ao acessar a API.');
+            return data;
+        }
+        function refreshProducts() {
+            sellerProducts = products.filter(p => p.storeId === currentStoreId);
+            renderProducts(); renderFeaturedProducts(); renderSellerProducts(); renderMyStoreProducts();
+        }
+        async function carregarProdutos() {
             try {
-                // Busca produtos reais da categoria 'futebol' na API do Mercado Livre
-                const response = await fetch('https://api.mercadolibre.com/sites/MLB/search?q=futebol&limit=12');
-                const data = await response.json();
-
-                if (data.results && data.results.length > 0) {
-                    // Mapeia os dados da API para a estrutura utilizada na sua aplicação
-                    products = data.results.map((item, index) => ({
-                        id: item.id || index + 1,
-                        storeId: (index % stores.length) + 1, // Distribui entre as lojas ativas
-                        name: item.title,
-                        price: item.price,
-                        description: "Produto obtido em tempo real via API pública do Mercado Livre.",
-                        category: "Futebol",
-                        quantity: item.available_quantity || 10,
-                        image: item.thumbnail.replace('I.jpg', 'O.jpg') // Converte para imagem em alta resolução
-                    }));
-
-                    // Atualiza a interface
-                    renderProducts();
-                    renderFeaturedProducts();
-                }
+                products = await apiRequest('/products');
+                apiError = '';
             } catch (error) {
-                console.error('Erro ao buscar produtos da API externa:', error);
+                apiError = 'Não foi possível carregar os produtos. Verifique a conexão com o servidor e tente novamente.';
             }
+            refreshProducts();
+            const status = document.getElementById('apiStatus');
+            status.textContent = apiError || `${products.length} produto(s) no catálogo.`;
         }
 
         // Initialize the application
@@ -61,7 +64,7 @@
             }
 
             // Busca produtos da API externa assim que a página carrega
-            carregarProdutosMercadoLivre();
+            carregarProdutos();
 
             renderStores();
             updateCartCount();
@@ -125,6 +128,7 @@
                 document.getElementById('storeRegistrationSection').style.display = 'none';
 
                 currentStoreId = userStore.id;
+                sellerProducts = products.filter(p => p.storeId === currentStoreId);
                 renderSellerProducts();
                 renderMyStoreProducts();
             } else {
@@ -177,6 +181,8 @@
         // Logout function
         function logout() {
             currentUser = null;
+            cart = []; orders = []; cancelEdit(); updateCartCount();
+            document.getElementById('adminToken').value = '';
             localStorage.removeItem('currentUser');
             document.getElementById('app').style.display = 'none';
             document.getElementById('login-page').style.display = 'block';
@@ -220,13 +226,13 @@
                 storeCard.onclick = () => showStoreProducts(store.id);
                 storeCard.innerHTML = `
                     <div class="store-image">
-                        <img src="${store.image}" alt="${store.name}">
+                        <img src="${escapeHtml(store.image)}" alt="${escapeHtml(store.name)}">
                     </div>
                     <div class="store-info">
-                        <div class="store-title">${store.name}</div>
-                        <div class="store-description">${store.description}</div>
-                        <div class="store-address">${store.address}</div>
-                        <div class="store-category">Categoria: ${store.category}</div>
+                        <div class="store-title">${escapeHtml(store.name)}</div>
+                        <div class="store-description">${escapeHtml(store.description)}</div>
+                        <div class="store-address">${escapeHtml(store.address)}</div>
+                        <div class="store-category">Categoria: ${escapeHtml(store.category)}</div>
                     </div>
                 `;
                 storesList.appendChild(storeCard);
@@ -243,13 +249,13 @@
                 storeCard.onclick = () => showStoreProducts(store.id);
                 storeCard.innerHTML = `
                     <div class="store-image">
-                        <img src="${store.image}" alt="${store.name}">
+                        <img src="${escapeHtml(store.image)}" alt="${escapeHtml(store.name)}">
                     </div>
                     <div class="store-info">
-                        <div class="store-title">${store.name}</div>
-                        <div class="store-description">${store.description}</div>
-                        <div class="store-address">${store.address}</div>
-                        <div class="store-category">Categoria: ${store.category}</div>
+                        <div class="store-title">${escapeHtml(store.name)}</div>
+                        <div class="store-description">${escapeHtml(store.description)}</div>
+                        <div class="store-address">${escapeHtml(store.address)}</div>
+                        <div class="store-category">Categoria: ${escapeHtml(store.category)}</div>
                     </div>
                 `;
                 featuredStores.appendChild(storeCard);
@@ -266,13 +272,13 @@
             const storeHeader = document.getElementById('storeHeader');
             storeHeader.innerHTML = `
                 <div class="store-logo">
-                    <img src="${store.image}" alt="${store.name}">
+                    <img src="${escapeHtml(store.image)}" alt="${escapeHtml(store.name)}">
                 </div>
                 <div class="store-details">
-                    <h2>${store.name}</h2>
-                    <p>${store.description}</p>
-                    <p><strong>Endereço:</strong> ${store.address}</p>
-                    <p><strong>Categoria:</strong> ${store.category}</p>
+                    <h2>${escapeHtml(store.name)}</h2>
+                    <p>${escapeHtml(store.description)}</p>
+                    <p><strong>Endereço:</strong> ${escapeHtml(store.address)}</p>
+                    <p><strong>Categoria:</strong> ${escapeHtml(store.category)}</p>
                 </div>
             `;
 
@@ -292,11 +298,11 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
                         <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
@@ -318,7 +324,7 @@
             productsList.innerHTML = '';
 
             if (products.length === 0) {
-                productsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando produtos reais da API...</p>';
+                productsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Nenhum produto disponível. Cadastre um produto na Área do Vendedor.</p>';
                 return;
             }
 
@@ -328,14 +334,14 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
+                        <div class="product-store">Loja: ${store ? escapeHtml(store.name) : 'Desconhecida'}</div>
                         <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
@@ -353,14 +359,14 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
+                        <div class="product-store">Loja: ${store ? escapeHtml(store.name) : 'Desconhecida'}</div>
                         <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
@@ -382,14 +388,14 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <div class="product-category">Categoria: ${product.category}</div>
+                        <div class="product-category">Categoria: ${escapeHtml(product.category)}</div>
                         <button class="btn btn-block" style="margin-top: 0.5rem;" onclick="editProduct('${product.id}')">Editar</button>
                         <button class="btn" style="background-color: var(--danger-color); margin-top: 0.5rem; width: 100%;" onclick="deleteProduct('${product.id}')">Excluir</button>
                     </div>
@@ -414,14 +420,14 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <div class="product-category">Categoria: ${product.category}</div>
+                        <div class="product-category">Categoria: ${escapeHtml(product.category)}</div>
                     </div>
                 `;
                 myStoreProductsList.appendChild(productCard);
@@ -429,76 +435,60 @@
         }
 
         // Add product function for sellers
-        function addProduct() {
-            const name = document.getElementById('productName').value;
-            const price = parseFloat(document.getElementById('productPrice').value);
-            const category = document.getElementById('productCategory').value;
-            const quantity = parseInt(document.getElementById('productQuantity').value);
-            const description = document.getElementById('productDescription').value;
-            const image = document.getElementById('productImage').value;
-
-            if (!name.trim() || !Number.isFinite(price) || price < 0 || !Number.isInteger(quantity) || quantity < 0 || !description.trim() || !image) {
-                alert('Por favor, preencha todos os campos.');
-                return;
-            }
-
-            const newProduct = {
-                id: editingProductId || crypto.randomUUID(),
-                storeId: currentStoreId,
-                name: name,
-                price: price,
-                category: category,
-                quantity: quantity,
-                description: description,
-                image: image
+        async function addProduct() {
+            if (savingProduct) return;
+            const body = {
+                name: document.getElementById('productName').value.trim(),
+                price: Number(document.getElementById('productPrice').value),
+                category: document.getElementById('productCategory').value,
+                quantity: Number(document.getElementById('productQuantity').value),
+                description: document.getElementById('productDescription').value.trim(),
+                image: document.getElementById('productImage').value.trim(),
+                storeId: currentStoreId
             };
-
-            if (editingProductId) {
-                products = products.filter(p => p.id !== editingProductId);
-                sellerProducts = sellerProducts.filter(p => p.id !== editingProductId);
+            if (!document.getElementById('productPrice').value || !document.getElementById('productQuantity').value) {
+                showNotification('Preencha preço e estoque.'); return;
             }
-            editingProductId = null;
-            sellerProducts.push(newProduct);
-            products.unshift(newProduct);
-
-            document.getElementById('productName').value = '';
-            document.getElementById('productPrice').value = '';
-            document.getElementById('productQuantity').value = '';
-            document.getElementById('productDescription').value = '';
-            document.getElementById('productImage').value = '';
-
-            renderSellerProducts();
-            renderMyStoreProducts();
-            renderProducts();
-            showNotification('Produto adicionado com sucesso!');
+            savingProduct = true;
+            document.getElementById('saveProduct').disabled = true;
+            try {
+                const saved = await apiRequest('/products' + (editingProductId ? '/' + editingProductId : ''), {
+                    method: editingProductId ? 'PUT' : 'POST', body: JSON.stringify(body)
+                });
+                products = [saved, ...products.filter(p => p.id !== saved.id)];
+                cancelEdit(); refreshProducts();
+                showNotification('Produto salvo no banco de dados.');
+            } catch (error) { showNotification(error.message); }
+            finally { savingProduct = false; document.getElementById('saveProduct').disabled = false; }
         }
-
         function editProduct(productId) {
-            const product = sellerProducts.find(p => p.id === productId);
+            if (savingProduct) return;
+            const product = products.find(p => p.id === productId);
             if (!product) return;
-
-            document.getElementById('productName').value = product.name;
-            document.getElementById('productPrice').value = product.price;
-            document.getElementById('productCategory').value = product.category;
-            document.getElementById('productQuantity').value = product.quantity;
-            document.getElementById('productDescription').value = product.description;
-            document.getElementById('productImage').value = product.image;
-
             editingProductId = productId;
-            showNotification('Produto carregado para edição.');
-        }
-
-        function deleteProduct(productId, showAlert = true) {
-            sellerProducts = sellerProducts.filter(p => p.id !== productId);
-            products = products.filter(p => p.id !== productId);
-
-            renderSellerProducts();
-            renderMyStoreProducts();
-            renderProducts();
-
-            if (showAlert) {
-                showNotification('Produto excluído com sucesso!');
+            for (const field of ['Name', 'Price', 'Category', 'Quantity', 'Description', 'Image']) {
+                document.getElementById('product' + field).value = product[field[0].toLowerCase() + field.slice(1)];
             }
+            document.getElementById('saveProduct').textContent = 'Salvar alterações';
+            document.getElementById('cancelEdit').hidden = false;
+            document.getElementById('productName').focus();
+        }
+        function cancelEdit() {
+            editingProductId = null;
+            for (const field of ['Name', 'Price', 'Quantity', 'Description', 'Image']) document.getElementById('product' + field).value = '';
+            document.getElementById('saveProduct').textContent = 'Adicionar Produto';
+            document.getElementById('cancelEdit').hidden = true;
+        }
+        async function deleteProduct(productId) {
+            if (savingProduct || !confirm('Excluir este produto do catálogo?')) return;
+            try {
+                await apiRequest('/products/' + productId, { method: 'DELETE' });
+                products = products.filter(p => p.id !== productId);
+                cart = cart.filter(p => p.id !== productId);
+                if (editingProductId === productId) cancelEdit();
+                refreshProducts(); updateCartCount();
+                showNotification('Produto excluído.');
+            } catch (error) { showNotification(error.message); }
         }
 
         // Search and filter functions
@@ -523,13 +513,13 @@
                 storeCard.onclick = () => showStoreProducts(store.id);
                 storeCard.innerHTML = `
                     <div class="store-image">
-                        <img src="${store.image}" alt="${store.name}">
+                        <img src="${escapeHtml(store.image)}" alt="${escapeHtml(store.name)}">
                     </div>
                     <div class="store-info">
-                        <div class="store-title">${store.name}</div>
-                        <div class="store-description">${store.description}</div>
-                        <div class="store-address">${store.address}</div>
-                        <div class="store-category">Categoria: ${store.category}</div>
+                        <div class="store-title">${escapeHtml(store.name)}</div>
+                        <div class="store-description">${escapeHtml(store.description)}</div>
+                        <div class="store-address">${escapeHtml(store.address)}</div>
+                        <div class="store-category">Categoria: ${escapeHtml(store.category)}</div>
                     </div>
                 `;
                 storesList.appendChild(storeCard);
@@ -556,13 +546,13 @@
                 storeCard.onclick = () => showStoreProducts(store.id);
                 storeCard.innerHTML = `
                     <div class="store-image">
-                        <img src="${store.image}" alt="${store.name}">
+                        <img src="${escapeHtml(store.image)}" alt="${escapeHtml(store.name)}">
                     </div>
                     <div class="store-info">
-                        <div class="store-title">${store.name}</div>
-                        <div class="store-description">${store.description}</div>
-                        <div class="store-address">${store.address}</div>
-                        <div class="store-category">Categoria: ${store.category}</div>
+                        <div class="store-title">${escapeHtml(store.name)}</div>
+                        <div class="store-description">${escapeHtml(store.description)}</div>
+                        <div class="store-address">${escapeHtml(store.address)}</div>
+                        <div class="store-category">Categoria: ${escapeHtml(store.category)}</div>
                     </div>
                 `;
                 storesList.appendChild(storeCard);
@@ -590,14 +580,14 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
+                        <div class="product-store">Loja: ${store ? escapeHtml(store.name) : 'Desconhecida'}</div>
                         <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
@@ -632,14 +622,14 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <div class="product-image">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
                     </div>
                     <div class="product-info">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-description">${product.description}</div>
+                        <div class="product-title">${escapeHtml(product.name)}</div>
+                        <div class="product-description">${escapeHtml(product.description)}</div>
                         <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                         <div class="product-quantity">Disponível: ${product.quantity}</div>
-                        <div class="product-store">Loja: ${store ? store.name : 'Desconhecida'}</div>
+                        <div class="product-store">Loja: ${store ? escapeHtml(store.name) : 'Desconhecida'}</div>
                         <button class="btn btn-block" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
                     </div>
                 `;
@@ -683,7 +673,7 @@
             }
 
             updateCartCount();
-            showNotification(`${product.name} adicionado ao carrinho!`);
+            showNotification(`${escapeHtml(product.name)} adicionado ao carrinho!`);
         }
 
         function updateCartCount() {
@@ -713,10 +703,10 @@
                 cartItem.className = 'cart-item';
                 cartItem.innerHTML = `
                     <div class="cart-item-image">
-                        <img src="${item.image}" alt="${item.name}">
+                        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">
                     </div>
                     <div class="cart-item-details">
-                        <div class="cart-item-title">${item.name}</div>
+                        <div class="cart-item-title">${escapeHtml(item.name)}</div>
                         <div class="cart-item-price">R$ ${item.price.toFixed(2)}</div>
                         <div class="cart-item-quantity">
                             <button class="quantity-btn" onclick="updateQuantity('${item.id}', ${item.quantity - 1})">-</button>
@@ -781,7 +771,7 @@
             updateCartCount();
 
             showPage('orders');
-            showNotification('Pedido realizado com sucesso!');
+            showNotification('Pedido demonstrativo criado. Nenhum pagamento ou reserva de estoque foi realizado.');
         }
 
         function renderOrders() {
@@ -811,7 +801,7 @@
                     <div class="order-items">
                         ${order.items.map(item => `
                             <div class="order-item">
-                                <div class="order-item-name">${item.name}</div>
+                                <div class="order-item-name">${escapeHtml(item.name)}</div>
                                 <div class="order-item-quantity">Qtd: ${item.quantity}</div>
                                 <div>R$ ${(item.price * item.quantity).toFixed(2)}</div>
                             </div>
@@ -881,3 +871,6 @@
         function showNotification(message) {
             alert(message);
         }
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
+}

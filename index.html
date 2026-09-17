@@ -33,7 +33,7 @@
 
                 <div class="form-group">
                     <label class="form-label" for="loginPassword">Senha</label>
-                    <input type="password" id="loginPassword" class="form-control" placeholder="Sua senha">
+                    <input type="text" id="loginPassword" value="demo" readonly class="form-control" placeholder="Acesso demonstrativo">
                 </div>
 
                 <button class="btn btn-block" onclick="login()">Entrar</button>
@@ -79,6 +79,8 @@
             <div class="container">
                 <!-- Home Page -->
                 <div id="home" class="page">
+                    <p id="apiStatus" role="status">Carregando catálogo...</p>
+                    <button class="btn" onclick="carregarProdutos()">Atualizar catálogo</button>
                     <h1 class="page-title">Bem-vindo a Lojinha do Messi</h1>
                     <p style="color: white; margin-bottom: 2rem;">Os melhores produtos de futebol do GOAT!</p>
 
@@ -202,6 +204,8 @@
 
                         <!-- Product Management Section (initially hidden) -->
                         <div class="dashboard-section" id="productManagementSection" style="display: none;">
+                            <label for="adminToken">Chave de administração</label>
+                            <input id="adminToken" type="password" class="form-control" autocomplete="off" placeholder="Chave para salvar ou excluir produtos">
                             <h3>Adicionar Novo Produto</h3>
                             <div class="product-form">
                                 <div class="form-group">
@@ -240,7 +244,8 @@
                                         placeholder="URL da imagem">
                                 </div>
                                 <div class="form-group form-full">
-                                    <button class="btn btn-block" onclick="addProduct()">Adicionar Produto</button>
+                                    <button id="saveProduct" class="btn btn-block" onclick="addProduct()">Adicionar Produto</button>
+                                    <button id="cancelEdit" class="btn" hidden onclick="cancelEdit()">Cancelar edição</button>
                                 </div>
                             </div>
                         </div>
@@ -289,6 +294,7 @@
 
                 <!-- Checkout Page -->
                 <div id="checkout" class="page" style="display: none;">
+                    <p>Compra demonstrativa. Não há cobrança nem reserva de estoque.</p>
                     <h1 class="page-title">Finalizar Pedido</h1>
                     <div class="checkout-form">
                         <h2 style="margin-bottom: 1rem;">Informações de Entrega</h2>
@@ -333,19 +339,19 @@
                         <h2 style="margin: 2rem 0 1rem 0;">Informações de Pagamento</h2>
                         <div class="form-group">
                             <label class="form-label" for="cardNumber">Número do Cartão</label>
-                            <input type="text" id="cardNumber" class="form-control" placeholder="1234 5678 9012 3456">
+                            <input type="text" disabled id="cardNumber" class="form-control" placeholder="1234 5678 9012 3456">
                         </div>
                         <div class="form-row">
                             <div class="form-col">
                                 <div class="form-group">
                                     <label class="form-label" for="expiryDate">Data de Validade</label>
-                                    <input type="text" id="expiryDate" class="form-control" placeholder="MM/AA">
+                                    <input type="text" disabled id="expiryDate" class="form-control" placeholder="MM/AA">
                                 </div>
                             </div>
                             <div class="form-col">
                                 <div class="form-group">
                                     <label class="form-label" for="cvv">CVV</label>
-                                    <input type="text" id="cvv" class="form-control" placeholder="123">
+                                    <input type="text" disabled id="cvv" class="form-control" placeholder="123">
                                 </div>
                             </div>
                         </div>
@@ -408,6 +414,7 @@
             </div>
         </footer>
     </div>
+    <script src="js/config.js"></script>
     <script src="js/lojinha.js"></script>
 </body>
 </html>

@@ -1,0 +1,10 @@
+import { mkdir, cp, writeFile, rm } from 'node:fs/promises';
+const apiUrl = process.env.API_URL || 'http://localhost:3000/api';
+const url = new URL(apiUrl);
+if (!['https:', 'http:'].includes(url.protocol)) throw new Error('API_URL deve ser HTTP(S).');
+if (process.env.CONTEXT === 'production' && (url.protocol !== 'https:' || url.hostname === 'localhost')) throw new Error('Configure API_URL com a URL HTTPS do backend no Render.');
+await rm('dist', { recursive: true, force: true });
+await mkdir('dist', { recursive: true });
+for (const path of ['index.html', 'css', 'js', 'img']) await cp(path, `dist/${path}`, { recursive: true });
+await writeFile('dist/js/config.js', `window.APP_CONFIG = ${JSON.stringify({ apiUrl: apiUrl.replace(/\/$/, '') })};\n`);
+console.log('Frontend gerado em dist.');
