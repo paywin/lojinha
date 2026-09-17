@@ -8,6 +8,7 @@
 
         // Array de produtos começa vazio e é preenchido pela API Externa
         let products = [];
+        let editingProductId = null;
 
         // User and cart data
         let currentUser = null;
@@ -52,9 +53,11 @@
         document.addEventListener('DOMContentLoaded', function () {
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
-                currentUser = JSON.parse(savedUser);
+                try { currentUser = JSON.parse(savedUser); } catch { localStorage.removeItem('currentUser'); }
+                if (currentUser) {
                 userType = currentUser.type;
                 showApp();
+                }
             }
 
             // Busca produtos da API externa assim que a página carrega
@@ -64,7 +67,7 @@
             updateCartCount();
             populateStoreFilter();
 
-            showPage('login-page');
+            if (!currentUser) showPage('login-page');
         });
 
         // User type selection
@@ -102,6 +105,7 @@
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('app').style.display = 'block';
 
+            document.getElementById('seller-nav').style.display = userType === 'seller' ? 'block' : 'none';
             if (userType === 'seller') {
                 document.getElementById('seller-nav').style.display = 'block';
                 checkSellerStore();
@@ -185,7 +189,9 @@
                 page.style.display = 'none';
             });
 
-            document.getElementById(pageId).style.display = 'block';
+            const target = document.getElementById(pageId);
+            if (!target) return;
+            target.style.display = 'block';
 
             if (pageId === 'cart') {
                 renderCart();
@@ -277,6 +283,7 @@
 
             if (storeProducts.length === 0) {
                 storeProductsList.innerHTML = '<p style="text-align: center; padding: 2rem;">Esta loja ainda não possui produtos cadastrados.</p>';
+                showPage('store-products');
                 return;
             }
 
@@ -430,13 +437,13 @@
             const description = document.getElementById('productDescription').value;
             const image = document.getElementById('productImage').value;
 
-            if (!name || !price || !quantity || !description || !image) {
+            if (!name.trim() || !Number.isFinite(price) || price < 0 || !Number.isInteger(quantity) || quantity < 0 || !description.trim() || !image) {
                 alert('Por favor, preencha todos os campos.');
                 return;
             }
 
             const newProduct = {
-                id: 'local_' + (sellerProducts.length + 1),
+                id: editingProductId || crypto.randomUUID(),
                 storeId: currentStoreId,
                 name: name,
                 price: price,
@@ -446,6 +453,11 @@
                 image: image
             };
 
+            if (editingProductId) {
+                products = products.filter(p => p.id !== editingProductId);
+                sellerProducts = sellerProducts.filter(p => p.id !== editingProductId);
+            }
+            editingProductId = null;
             sellerProducts.push(newProduct);
             products.unshift(newProduct);
 
@@ -472,7 +484,7 @@
             document.getElementById('productDescription').value = product.description;
             document.getElementById('productImage').value = product.image;
 
-            deleteProduct(productId, false);
+            editingProductId = productId;
             showNotification('Produto carregado para edição.');
         }
 
@@ -525,7 +537,7 @@
         }
 
         function filterStores() {
-            const category = document.getElementById('storeCategory').value;
+            const category = document.getElementById('storeCategoryFilter').value;
             const storesList = document.getElementById('storesList');
             storesList.innerHTML = '';
 
@@ -594,7 +606,7 @@
         }
 
         function filterProducts() {
-            const category = document.getElementById('productCategory').value;
+            const category = document.getElementById('productCategoryFilter').value;
             const storeId = document.getElementById('productStore').value;
             const productsList = document.getElementById('productsList');
             productsList.innerHTML = '';
@@ -650,7 +662,7 @@
         // Cart functionality
         function addToCart(productId) {
             const product = products.find(p => p.id == productId);
-            if (!product) return;
+            if (!product || product.quantity < 1) return;
 
             const existingItem = cart.find(item => item.id == productId);
 
@@ -727,7 +739,7 @@
         }
 
         function updateQuantity(productId, newQuantity) {
-            if (newQuantity < 1) return;
+            if (!Number.isInteger(newQuantity) || newQuantity < 1) return;
 
             const product = products.find(p => p.id == productId);
             if (product && newQuantity > product.quantity) {

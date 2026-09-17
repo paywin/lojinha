@@ -39,7 +39,7 @@
                 <button class="btn btn-block" onclick="login()">Entrar</button>
 
                 <p style="text-align: center; margin-top: 1rem;">
-                    Não tem uma conta? <a href="#" onclick="showPage('register')">Cadastre-se</a>
+                    Acesso demonstrativo: escolha um perfil para explorar.
                 </p>
             </div>
         </div>
@@ -104,7 +104,7 @@
                             <button onclick="searchStores()">Buscar</button>
                         </div>
                         <div class="filter-options">
-                            <select class="filter-select" id="storeCategory" onchange="filterStores()">
+                            <select class="filter-select" id="storeCategoryFilter" onchange="filterStores()">
                                 <option value="">Todas as categorias</option>
                                 <option value="Esportes">Esportes</option>
                                 <option value="Vestuário">Vestuário</option>
@@ -138,7 +138,7 @@
                             <button onclick="searchProducts()">Buscar</button>
                         </div>
                         <div class="filter-options">
-                            <select class="filter-select" id="productCategory" onchange="filterProducts()">
+                            <select class="filter-select" id="productCategoryFilter" onchange="filterProducts()">
                                 <option value="">Todas as categorias</option>
                                 <option value="Bolas">Bolas</option>
                                 <option value="Chuteiras">Chuteiras</option>
